@@ -3,15 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-
-static int quit(int x) { exit(x); return x; }
-
-static char isdigit(char x) {
-	return x=='0' || x=='1' || x=='2' || x=='3' ||
-	       x=='4' || x=='5' || x=='6' || x=='7' ||
-	       x=='8' || x=='9';
-}
-static int digit2int(char x) { return x - '0'; }
+#include "util.h"
 
 static int quit_usage() {
 	fprintf(stderr, "usage: romswap <address map> <data map> <input file> <output file>\n");
@@ -24,23 +16,12 @@ static int quit_bitcount() {
 }
 
 static int quit_databitcount() {
-	fprintf(stderr, "romswap: ERROR! Too many bits in data map pattern.\n");
+	fprintf(stderr, "romswap: ERROR! Fewer than 8 bits in data map pattern.\n");
 	return quit(-1);
 }
 
 static int quit_bitindex() {
 	fprintf(stderr, "romswap: ERROR! Too high bit index.\n");
-	return quit(-1);
-}
-
-static int quit_infile(char *filename) {
-	fprintf(stderr, "romswap: ERROR! Failed to open input file \"%s\"!\n", filename);
-	return quit(-1);
-}
-
-
-static int quit_outfile(char *filename) {
-	fprintf(stderr, "romswap: ERROR! Failed to open output file \"%s\"!\n", filename);
 	return quit(-1);
 }
 
@@ -57,7 +38,7 @@ int read_pin_list(char *map_str, int *map_pattern, int maxbits) {
 		cur = map_str[i];
 
 		// Fail if too many pin bits
-		if (i >= maxbits) { return quit_bitcount(); }
+		if (bits >= maxbits) { return quit_bitcount(); }
 
 		// Fail if not digit or comma
 		if (!isdigit(cur) && (cur != ',')) { return quit_usage(); }
@@ -110,6 +91,7 @@ static void gen_map(int bits, int *pattern, int *map) {
 
 // romswap 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19 0,1,2,3,4,5,6,7 input.bin output.bin
 int main (int argc, char *argv[]) {
+	// Check argument count
 	if (argc != 5) { return quit_usage(); }
 
 	// Generate address swap map
@@ -129,7 +111,7 @@ int main (int argc, char *argv[]) {
 	if (d_bits != DATA_BITS) { return quit_databitcount(); }
 	int d_map[DATA_MAP_SIZE];
 	gen_map(d_bits, d_map_pattern, d_map);
-
+ 
 	// Open input and output files
 	FILE *infile = fopen(argv[3], "r");
 	if (infile == NULL) { return quit_infile(argv[3]); }
@@ -138,10 +120,11 @@ int main (int argc, char *argv[]) {
 
 	// Read input and do data swap
 	char buf[rom_size];
+	memset(buf, 0, rom_size);
 	for (int i = 0; i < rom_size; i++) {
 		int c = fgetc(infile);
 		if (c == EOF) { break; }
-		buf[i] = d_map[c];
+		buf[i] = d_map[c & (DATA_MAP_SIZE - 1)];
 	}
 	fclose(infile);
 
