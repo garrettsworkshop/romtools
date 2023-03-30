@@ -5,6 +5,19 @@
 #include <stdio.h>
 #include "util.h"
 
+static int quit(int x) { exit(x); return x; }
+
+static int quit_infile(char *filename) {
+	fprintf(stderr, "romswap: ERROR! Failed to open input file \"%s\"!\n", filename);
+	return quit(-1);
+}
+
+
+static int quit_outfile(char *filename) {
+	fprintf(stderr, "romswap: ERROR! Failed to open output file \"%s\"!\n", filename);
+	return quit(-1);
+}
+
 static int quit_usage() {
 	fprintf(stderr, "usage: romswap <address map> <data map> <input file> <output file>\n");
 	return quit(-1);
